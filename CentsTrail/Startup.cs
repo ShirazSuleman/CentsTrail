@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using CentsTrail.Data;
 using CentsTrail.Models;
 using CentsTrail.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Rewrite;
 
 namespace CentsTrail
 {
@@ -37,6 +39,11 @@ namespace CentsTrail
             services.AddTransient<IEmailSender, EmailSender>();
 
             services.AddMvc();
+
+            services.Configure<MvcOptions>(options =>
+            {
+                options.Filters.Add(new RequireHttpsAttribute());
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -63,6 +70,10 @@ namespace CentsTrail
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+
+            var options = new RewriteOptions().AddRedirectToHttps();
+
+            app.UseRewriter(options);
         }
     }
 }
