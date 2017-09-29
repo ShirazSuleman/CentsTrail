@@ -6,67 +6,68 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using CentsTrail.Data;
-using CentsTrail.Models.BankAccounts;
-using CentsTrail.Models.BankAccounts.ViewModels;
+using CentsTrail.Models.Categories;
+using Microsoft.AspNetCore.Authorization;
+using CentsTrail.Models.Categories.ViewModels;
 using CentsTrail.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authorization;
 
 namespace CentsTrail.Controllers
 {
     [Authorize]
     [Route("[controller]/[action]")]
-    public class BankAccountsController : Controller
+    public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
         private string _currentUserId => GetCurrentUser().Result.Id;
 
-        public BankAccountsController(ApplicationDbContext context,
+        public CategoriesController(ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
         }
 
-        // GET: BankAccounts
+        // GET: Categories
         public async Task<IActionResult> Index()
         {
-            var bankAccounts = _context.BankAccounts.Include(b => b.User).Where(ba => ba.UserId == _currentUserId);
-            return View(await bankAccounts.ToListAsync());
+            var categories = _context.Categories.Include(b => b.User).Where(c => c.UserId == _currentUserId);
+            return View(await categories.ToListAsync());
         }
 
-        // GET: BankAccounts/Create
+        // GET: Categories/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: BankAccounts/Create
+        // POST: Categories/Create
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,BankAccountType")] EditBankAccountViewModel bankAccountViewModel)
+        public async Task<IActionResult> Create([Bind("Id,Name,Limit,CategoryType")] EditCategoryViewModel viewModel)
         {
-            var bankAccount = new BankAccount
+            var category = new Category
             {
-                Name = bankAccountViewModel.Name,
-                BankAccountType = bankAccountViewModel.BankAccountType,
+                Name = viewModel.Name,
+                CategoryType = viewModel.CategoryType,
+                Limit = viewModel.Limit,
                 User = await GetCurrentUser()
             };
 
             if (ModelState.IsValid)
             {
-                _context.Add(bankAccount);
+                _context.Add(category);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(bankAccountViewModel);
+            return View(viewModel);
         }
 
-        // GET: BankAccounts/Edit/5
+        // GET: Categories/Edit/5
         public async Task<IActionResult> Edit(long? id)
         {
             if (id == null)
@@ -74,40 +75,42 @@ namespace CentsTrail.Controllers
                 return NotFound();
             }
 
-            var bankAccount = await GetBankAccount(id.Value);
+            var category = await GetCategory(id.Value);
 
-            if (bankAccount == null)
+            if (category == null)
             {
                 return NotFound();
             }
 
-            var bankAccountViewModel = new EditBankAccountViewModel
+            var categoryViewModel = new EditCategoryViewModel
             {
-                Id = bankAccount.Id,
-                Name = bankAccount.Name,
-                BankAccountType = bankAccount.BankAccountType,
+                Id = category.Id,
+                Name = category.Name,
+                Limit = category.Limit,
+                CategoryType = category.CategoryType,
             };
 
-            return View(bankAccountViewModel);
+            return View(categoryViewModel);
         }
 
-        // POST: BankAccounts/Edit/5
+        // POST: Categories/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,BankAccountType")] EditBankAccountViewModel bankAccountViewModel)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Limit,CategoryType")] EditCategoryViewModel viewModel)
         {
-            if (id != bankAccountViewModel.Id)
+            if (id != viewModel.Id)
             {
                 return NotFound();
             }
 
-            var bankAccount = new BankAccount
+            var category = new Category
             {
-                Id = bankAccountViewModel.Id,
-                Name = bankAccountViewModel.Name,
-                BankAccountType = bankAccountViewModel.BankAccountType,
+                Id = viewModel.Id,
+                Name = viewModel.Name,
+                Limit = viewModel.Limit,
+                CategoryType = viewModel.CategoryType,
                 User = await GetCurrentUser()
             };
 
@@ -115,12 +118,12 @@ namespace CentsTrail.Controllers
             {
                 try
                 {
-                    _context.Update(bankAccount);
+                    _context.Update(category);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!BankAccountExists(bankAccount.Id))
+                    if (!CategoryExists(category.Id))
                     {
                         return NotFound();
                     }
@@ -131,10 +134,10 @@ namespace CentsTrail.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(bankAccountViewModel);
+            return View(viewModel);
         }
 
-        // GET: BankAccounts/Delete/5
+        // GET: Categories/Delete/5
         public async Task<IActionResult> Delete(long? id)
         {
             if (id == null)
@@ -142,37 +145,38 @@ namespace CentsTrail.Controllers
                 return NotFound();
             }
 
-            var bankAccount = await GetBankAccount(id.Value);
-            if (bankAccount == null)
+            var category = await GetCategory(id.Value);
+            if (category == null)
             {
                 return NotFound();
             }
 
-            return View(bankAccount);
+            return View(category);
         }
 
-        // POST: BankAccounts/Delete/5
+        // POST: Categories/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            var bankAccount = await GetBankAccount(id);
-            _context.BankAccounts.Remove(bankAccount);
+            var category = await GetCategory(id);
+            _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool BankAccountExists(long id)
+        private bool CategoryExists(long id)
         {
-            return _context.BankAccounts.Include(b => b.User).Where(ba => ba.UserId == _currentUserId).Any(e => e.Id == id);
+            return _context.Categories.Include(b => b.User).Where(c => c.UserId == _currentUserId).Any(e => e.Id == id);
         }
 
-        private async Task<BankAccount> GetBankAccount(long id)
+        private async Task<Category> GetCategory(long id)
         {
-            return await _context.BankAccounts.Include(b => b.User)
-                                              .Where(ba => ba.UserId == _currentUserId)
-                                              .SingleOrDefaultAsync(m => m.Id == id);
+            return await _context.Categories.Include(b => b.User)
+                                            .Where(c => c.UserId == _currentUserId)
+                                            .SingleOrDefaultAsync(m => m.Id == id);
         }
+
         private async Task<ApplicationUser> GetCurrentUser()
         {
             return await _userManager.GetUserAsync(User);
